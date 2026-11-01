@@ -1,0 +1,15 @@
+{:deps {:aliases [:cljs]}
+ :dev-http {}
+ :builds
+ {:app {:target :browser
+        :output-dir "resources/public/js"
+        :asset-path "/js"
+        :modules {:main {:init-fn clj-browse.ui.core/init}}
+        :devtools {:after-load clj-browse.ui.core/reload!}
+        :compiler-options {:infer-externs :auto}}
+  :electron {:target :node-script
+             :main clj-browse.electron.main/main
+             :output-to "electron/app/main.js"}
+  :test {:target :node-test
+         :output-to "out/node-tests.js"
+         :ns-regexp "-test$"}}}

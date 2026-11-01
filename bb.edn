@@ -1,0 +1,55 @@
+{:tasks
+ {:requires ([babashka.process :as p :refer [shell]]
+             [babashka.fs :as fs])
+
+  :init (do
+          (def jvm-flags
+            ["--add-opens=java.base/java.nio=ALL-UNNAMED"
+             "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED"
+             "--enable-native-access=ALL-UNNAMED"
+             "--sun-misc-unsafe-memory-access=allow"])
+          (def tailwind ["npx" "tailwindcss" "-i" "src/css/app.css" "-o" "resources/public/css/app.css"])
+          (def run-server
+            (into ["clojure"] (concat (map (fn [f] (str "-J" f)) jvm-flags) ["-M:run" "serve"]))))
+
+  -need-jar {:doc "Hidden: ensure target/clj-browse.jar exists"
+             :task (when-not (fs/exists? "target/clj-browse.jar") (run 'uber))}
+
+  css {:doc "Build Tailwind CSS once (minified)"
+       :task (apply shell (concat tailwind ["--minify"]))}
+
+  dev {:doc "Dev mode: tailwind watch + shadow-cljs watch app + server (Ctrl-C stops all). Extra args go to `serve`, e.g. bb dev --host 0.0.0.0 --token s3cret"
+       :task (let [_ (println "Starting tailwind, shadow-cljs watch and server" (str *command-line-args*))
+                   procs (mapv (fn [c] (apply p/process {:inherit true} c))
+                               [(concat tailwind ["--watch"])
+                                ["npx" "shadow-cljs" "watch" "app"]
+                                (into run-server *command-line-args*)])]
+               (.addShutdownHook (Runtime/getRuntime)
+                                 (Thread. (fn [] (doseq [pr procs] (p/destroy-tree pr)))))
+               (run! deref procs))}
+
+  test {:doc "Run the Clojure test suite (kaocha)"
+        :task (shell "clojure" "-M:test")}
+
+  lint {:doc "clj-kondo lint src and test"
+        :task (shell "clj-kondo" "--lint" "src" "test")}
+
+  uber {:doc "Build target/clj-browse.jar (release frontend + AOT server)"
+        :task (shell "clojure" "-T:build" "uber")}
+
+  jre {:doc "Build minimal JRE in target/jre with jlink (needs the uberjar)"
+       :depends [-need-jar]
+       :task (shell "scripts/jlink.sh")}
+
+  electron:dev {:doc "Compile the Electron shell and run it against target/clj-browse.jar"
+                :depends [-need-jar]
+                :task (do (shell "npx" "shadow-cljs" "compile" "electron")
+                          (when-not (fs/exists? "electron/node_modules") (shell {:dir "electron"} "npm" "install"))
+                          (shell {:dir "electron"} "npx" "electron" "."))}
+
+  package {:doc "Full desktop package: uber + jre + electron release + electron-builder"
+           :task (do (run 'uber)
+                     (run 'jre)
+                     (shell "npx" "shadow-cljs" "release" "electron")
+                     (shell {:dir "electron"} "npm" "install")
+                     (shell {:dir "electron"} "npx" "electron-builder"))}}}

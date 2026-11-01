@@ -1,0 +1,27 @@
+{
+  "name": "clj-browse-desktop",
+  "version": "0.1.0",
+  "description": "Desktop shell for clj-browse",
+  "main": "app/main.js",
+  "private": true,
+  "author": "clj-browse",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^45.0.0",
+    "electron-builder": "latest"
+  },
+  "build": {
+    "appId": "dev.cljbrowse.app",
+    "productName": "clj-browse",
+    "files": ["app/**"],
+    "extraResources": [
+      {"from": "../target/clj-browse.jar", "to": "clj-browse.jar"},
+      {"from": "../target/jre", "to": "jre"}
+    ],
+    "linux": {"target": ["AppImage", "deb"], "category": "Development", "maintainer": "clj-browse"},
+    "mac": {"target": "dmg", "category": "public.app-category.developer-tools", "identity": null}
+  }
+}

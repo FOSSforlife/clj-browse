@@ -1,0 +1,13 @@
+.cpcache/
+.shadow-cljs/
+node_modules/
+target/
+out/
+resources/public/js/
+resources/public/css/app.css
+.nrepl-port
+.clj-kondo/.cache/
+dist/
+electron/app/
+electron/dist/
+.clj-kondo/
